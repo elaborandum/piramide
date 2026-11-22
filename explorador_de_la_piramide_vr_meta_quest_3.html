@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>El Secreto de la Pirámide — Experiencia VR Meta Quest 3</title>
+  <!-- A-Frame 1.6.0 (Soporte nativo WebXR para Meta Quest 3) -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #140d07;
+      color: #f8e7c9;
+      overflow: hidden;
+    }
+
+    /* Pantalla de bienvenida e instrucciones para PC y Quest 3 */
+    #overlay-ui {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: radial-gradient(circle at center, rgba(44, 25, 11, 0.92) 0%, rgba(14, 8, 4, 0.98) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      transition: opacity 0.5s ease;
+    }
+    #overlay-ui.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .card {
+      max-width: 680px;
+      width: 100%;
+      background: linear-gradient(160deg, #241509 0%, #160c05 100%);
+      border: 2px solid #c9963b;
+      border-radius: 18px;
+      padding: 28px 32px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(201, 150, 59, 0.2);
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(201, 150, 59, 0.18);
+      border: 1px solid #c9963b;
+      color: #f3c86b;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-size: clamp(1.6rem, 3.5vw, 2.3rem);
+      color: #ffd782;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 12px rgba(255, 180, 50, 0.35);
+    }
+    p.subtitle {
+      color: #d9c29c;
+      font-size: 0.98rem;
+      line-height: 1.55;
+      margin-bottom: 22px;
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+    .control-box {
+      background: rgba(255, 224, 166, 0.05);
+      border: 1px solid rgba(201, 150, 59, 0.3);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .control-box h3 {
+      color: #f3c86b;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .control-box ul {
+      list-style: none;
+      font-size: 0.85rem;
+      color: #e6d3b3;
+      line-height: 1.6;
+    }
+    .control-box li strong {
+      color: #ffd782;
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 26px;
+      font-size: 1rem;
+      font-weight: 700;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e5aa3c 0%, #b57819 100%);
+      color: #160c04;
+      box-shadow: 0 6px 20px rgba(229, 170, 60, 0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 26px rgba(229, 170, 60, 0.6);
+    }
+
+    /* HUD discreto en pantalla plana (PC) */
+    #desktop-hud {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 500;
+      background: rgba(20, 12, 5, 0.78);
+      border: 1px solid rgba(201, 150, 59, 0.5);
+      backdrop-filter: blur(6px);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      max-width: 310px;
+      pointer-events: none;
+    }
+    #desktop-hud .hud-title {
+      color: #ffd782;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    #desktop-hud .hud-status {
+      color: #e8d5b5;
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Pantalla inicial de instrucciones y activación de audio -->
+  <div id="overlay-ui">
+    <div class="card">
+      <div class="badge">WebXR • Meta Quest 3 &amp; PC</div>
+      <h1>El Secreto de la Pirámide</h1>
+      <p class="subtitle">
+        Explora las arenas del desierto al atardecer, cruza la entrada monumental hacia las profundidades de la pirámide y encuentra las <strong>3 reliquias sagradas</strong> para abrir la cámara oculta del faraón.
+      </p>
+
+      <div class="controls-grid">
+        <div class="control-box">
+          <h3>🥽 Controles Meta Quest 3</h3>
+          <ul>
+            <li><strong>Joystick Izquierdo:</strong> Caminar libremente</li>
+            <li><strong>Joystick Derecho:</strong> Giro rápido (Snap Turn)</li>
+            <li><strong>Gatillo / Rayo láser:</strong> Apuntar y recoger reliquias o teletransportarse</li>
+            <li><strong>Botón VR (abajo derecha):</strong> Entrar en inmersión</li>
+          </ul>
+        </div>
+        <div class="control-box">
+          <h3>💻 Controles en Ordenador</h3>
+          <ul>
+            <li><strong>W A S D / Flechas:</strong> Caminar</li>
+            <li><strong>Ratón (arrastrar):</strong> Mirar alrededor</li>
+            <li><strong>Clic izquierdo:</strong> Recoger reliquia / Teletransporte</li>
+            <li><strong>Shift:</strong> Caminar más rápido</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="start-btn" class="btn btn-primary">Comenzar Expedición</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD superior izquierdo para vista en navegador normal -->
+  <div id="desktop-hud">
+    <div class="hud-title">🏺 Reliquias: <span id="hud-count">0</span> / 3</div>
+    <div class="hud-status" id="hud-msg">Explora el exterior y entra en la pirámide.</div>
+  </div>
+
+  <!-- ESCENA WEBXR PRINCIPAL -->
+  <a-scene
+    id="pyramid-scene"
+    renderer="antialias: true; colorManagement: true; highRefreshRate: true; foveationLevel: 2;"
+    vr-mode-ui="enabled: true"
+    webxr="optionalFeatures: local-floor, bounded-floor, hand-tracking;"
+    fog="type: exponential; color: #d89b56; density: 0.0085"
+    pyramid-game-manager
+  >
+    <!-- Cielo y atmósfera del desierto -->
+    <a-sky id="desert-sky" color="#e39a54"></a-sky>
+    <a-sphere position="0 42 -160" radius="14" color="#fff0b8" material="shader: flat; fog: false"></a-sphere>
+
+    <!-- Iluminación global optimizada para Quest 3 -->
+    <a-entity id="sun-light" light="type: directional; color: #ffdfa8; intensity: 1.15" position="25 45 35"></a-entity>
+    <a-entity id="ambient-light" light="type: hemisphere; color: #ffcf87; groundColor: #5e3d1e; intensity: 0.65"></a-entity>
+
+    <!-- ========================================================= -->
+    <!-- RIG DEL JUGADOR (Compatible con Meta Quest 3 y PC)        -->
+    <!-- ========================================================= -->
+    <a-entity id="player-rig" position="0 0 28" quest-locomotion="speed: 4.5; snapAngle: 35">
+      <!-- Cámara / Cabeza -->
+      <a-entity
+        id="player-camera"
+        camera
+        position="0 1.65 0"
+        look-controls="pointerLockEnabled: false"
+        wasd-controls="enabled: false"
+      >
+        <!-- Retícula para navegador de escritorio -->
+        <a-entity
+          id="gaze-cursor"
+          cursor="rayOrigin: mouse"
+          raycaster="objects: .interactive, .teleportable; far: 22"
+        ></a-entity>
+
+        <!-- HUD Diegético flotante sutil dentro de las gafas VR -->
+        <a-entity id="vr-hud" position="0 -0.34 -0.85" rotation="-18 0 0" visible="false">
+          <a-plane width="0.52" height="0.11" color="#1a0f06" opacity="0.82" material="shader: flat"></a-plane>
+          <a-text
+            id="vr-hud-text"
+            value="Reliquias: 0/3 | Entra en la piramide"
+            align="center"
+            color="#ffd782"
+            width="0.95"
+            position="0 0 0.01"
+          ></a-text>
+        </a-entity>
+      </a-entity>
+
+      <!-- Mando Izquierdo Meta Quest 3 -->
+      <a-entity
+        id="left-hand"
+        oculus-touch-controls="hand: left; model: true"
+        laser-controls="hand: left"
+        raycaster="objects: .interactive, .teleportable; far: 18; lineColor: #ffd782; lineOpacity: 0.75"
+      ></a-entity>
+
+      <!-- Mando Derecho Meta Quest 3 -->
+      <a-entity
+        id="right-hand"
+        oculus-touch-controls="hand: right; model: true"
+        laser-controls="hand: right"
+        raycaster="objects: .interactive, .teleportable; far: 18; lineColor: #ffd782; lineOpacity: 0.75"
+      ></a-entity>
+    </a-entity>
+
+    <!-- ========================================================= -->
+    <!-- 1. ESCENARIO EXTERIOR: DESIERTO, DUNAS Y OBELISCOS          -->
+    <!-- ========================================================= -->
+    <a-entity id="exterior-world">
+      <!-- Suelo principal de arena navegable -->
+      <a-plane
+        id="desert-floor"
+        class="teleportable"
+        position="0 0 0"
+        rotation="-90 0 0"
+        width="260"
+        height="260"
+        material="roughness: 0.95; metalness: 0.02"
+        procedural-texture="type: sand; repeat: 40 40"
+      ></a-plane>
+
+      <!-- Dunas perimetrales en el horizonte -->
+      <a-sphere position="-48 -3 -20" radius="24" scale="1.8 0.32 1.4" material="roughness: 0.95" procedural-texture="type: sand; repeat: 8 8"></a-sphere>
+      <a-sphere position="52 -3 -15" radius="26" scale="1.7 0.35 1.5" material="roughness: 0.95" procedural-texture="type: sand; repeat: 8 8"></a-sphere>
+      <a-sphere position="-38 -3 38" radius="22" scale="1.6 0.28 1.5" material="roughness: 0.95" procedural-texture="type: sand; repeat: 8 8"></a-sphere>
+      <a-sphere position="44 -3 42" radius="25" scale="1.9 0.3 1.4" material="roughness: 0.95" procedural-texture="type: sand; repeat: 8 8"></a-sphere>
+      <a-sphere position="0 -4 -85" radius="45" scale="2.2 0.45 1.3" material="roughness: 0.95" procedural-texture="type: sand; repeat: 12 12"></a-sphere>
+
+      <!-- Calzada procesional hacia la entrada de la pirámide -->
+      <a-box
+        class="teleportable"
+        position="0 0.03 14"
+        width="5.2"
+        height="0.06"
+        depth="24"
+        procedural-texture="type: limestone; repeat: 3 14"
+      ></a-box>
+
+      <!-- Obeliscos con jeroglíficos procedurales flanqueando el camino -->
+      <a-entity position="-4.5 0 18">
+        <a-box position="0 0.6 0" width="1.8" height="1.2" depth="1.8" procedural-texture="type: limestone; repeat: 2 2"></a-box>
+        <a-box position="0 3.6 0" width="1.15" height="4.8" depth="1.15" procedural-texture="type: hieroglyphs; repeat: 1 3"></a-box>
+        <a-cone position="0 6.55 0" radius-bottom="0.81" radius-top="0.02" height="1.1" rotation="0 45 0" segments-radial="4" color="#d4af37" material="metalness: 0.7; roughness: 0.3"></a-cone>
+      </a-entity>
+
+      <a-entity position="4.5 0 18">
+        <a-box position="0 0.6 0" width="1.8" height="1.2" depth="1.8" procedural-texture="type: limestone; repeat: 2 2"></a-box>
+        <a-box position="0 3.6 0" width="1.15" height="4.8" depth="1.15" procedural-texture="type: hieroglyphs; repeat: 1 3"></a-box>
+        <a-cone position="0 6.55 0" radius-bottom="0.81" radius-top="0.02" height="1.1" rotation="0 45 0" segments-radial="4" color="#d4af37" material="metalness: 0.7; roughness: 0.3"></a-cone>
+      </a-entity>
+
+      <!-- Cartel pétreo de bienvenida junto al inicio -->
+      <a-entity position="-3.2 0 24.5" rotation="0 28 0">
+        <a-box position="0 1.1 0" width="2.2" height="2.2" depth="0.35" procedural-texture="type: limestone; repeat: 2 2"></a-box>
+        <a-plane position="0 1.25 0.19" width="1.95" height="1.5" color="#1d1208"></a-plane>
+        <a-text
+          value="TEMPLO DE KEOPS\n\nCruza el portal de la piramide\ny reune las 3 reliquias\npara abrir la camara oculta."
+          align="center"
+          color="#f7cf7e"
+          width="3.2"
+          position="0 1.25 0.21"
+        ></a-text>
+      </a-entity>
+
+      <!-- Palmeras del oasis cercano -->
+      <a-entity desert-palm position="-11 0 21"></a-entity>
+      <a-entity desert-palm position="-14 0 15" scale="1.2 1.25 1.2"></a-entity>
+      <a-entity desert-palm position="12 0 22" scale="0.95 1.1 0.95"></a-entity>
+      <a-entity desert-palm position="15 0 13" scale="1.15 1.2 1.15"></a-entity>
+
+      <!-- Braseros de fuego en la entrada monumental -->
+      <a-entity torch-brazier="light: true" position="-3.2 0 4.5"></a-entity>
+      <a-entity torch-brazier="light: true" position="3.2 0 4.5"></a-entity>
+    </a-entity>
+
+    <!-- ========================================================= -->
+    <!-- 2. GRAN PIRÁMIDE (EXTERIOR MONUMENTAL + HUECO DE ENTRADA)  -->
+    <!-- ========================================================= -->
+    <a-entity id="great-pyramid" position="0 0 -22">
+      <!-- Pirámide escalonada monumental (8 niveles con hueco frontal en los niveles inferiores para entrar caminando) -->
+      <!-- Nivel 1 (Base 48x48, dividida para dejar corredor central de 4.4m de ancho) -->
+      <a-box position="-13.1 1.5 0" width="21.8" height="3" depth="48" procedural-texture="type: limestone; repeat: 10 2"></a-box>
+      <a-box position="13.1 1.5 0" width="21.8" height="3" depth="48" procedural-texture="type: limestone; repeat: 10 2"></a-box>
+      <a-box position="0 1.5 -13" width="4.4" height="3" depth="22" procedural-texture="type: limestone; repeat: 2 2"></a-box>
+
+      <!-- Nivel 2 (42x42, también abierto en el frontal para altura de entrada de 6m) -->
+      <a-box position="-11.6 4.5 0" width="18.8" height="3" depth="42" procedural-texture="type: limestone; repeat: 9 2"></a-box>
+      <a-box position="11.6 4.5 0" width="18.8" height="3" depth="42" procedural-texture="type: limestone; repeat: 9 2"></a-box>
+      <a-box position="0 4.5 -10" width="4.4" height="3" depth="22" procedural-texture="type: limestone; repeat: 2 2"></a-box>
+
+      <!-- Dintel monumental sobre la entrada -->
+      <a-box position="0 4.8 20.5" width="7.2" height="1.4" depth="2.2" procedural-texture="type: hieroglyphs; repeat: 3 1"></a-box>
+      <a-box position="-2.8 2.4 20.5" width="1.2" height="4.8" depth="2.0" procedural-texture="type: hieroglyphs; repeat: 1 3"></a-box>
+      <a-box position="2.8 2.4 20.5" width="1.2" height="4.8" depth="2.0" procedural-texture="type: hieroglyphs; repeat: 1 3"></a-box>
+
+      <!-- Niveles superiores de la pirámide (del 3 al 8) -->
+      <a-box position="0 7.5 0" width="36" height="3" depth="36" procedural-texture="type: limestone; repeat: 16 2"></a-box>
+      <a-box position="0 10.5 0" width="30" height="3" depth="30" procedural-texture="type: limestone; repeat: 14 2"></a-box>
+      <a-box position="0 13.5 0" width="24" height="3" depth="24" procedural-texture="type: limestone; repeat: 11 2"></a-box>
+      <a-box position="0 16.5 0" width="18" height="3" depth="18" procedural-texture="type: limestone; repeat: 8 2"></a-box>
+      <a-box position="0 19.5 0" width="12" height="3" depth="12" procedural-texture="type: limestone; repeat: 6 2"></a-box>
+      <a-box position="0 22.5 0" width="6" height="3" depth="6" procedural-texture="type: limestone; repeat: 3 2"></a-box>
+
+      <!-- Piramidión dorado en la cúspide -->
+      <a-cone
+        position="0 26.2 0"
+        radius-bottom="3.2"
+        radius-top="0.05"
+        height="4.4"
+        rotation="0 45 0"
+        segments-radial="4"
+        color="#e5b842"
+        material="metalness: 0.75; roughness: 0.25"
+      ></a-cone>
+    </a-entity>
+
+    <!-- ========================================================= -->
+    <!-- 3. INTERIOR DE LA PIRÁMIDE: PASADIZO Y CÁMARA DEL FARAÓN  -->
+    <!-- ========================================================= -->
+    <a-entity id="pyramid-interior">
+      <!-- Suelo continuo del corredor y la cámara -->
+      <a-box
+        class="teleportable"
+        position="0 0.02 -13"
+        width="4.4"
+        height="0.06"
+        depth="18"
+        procedural-texture="type: limestone; repeat: 3 12"
+      ></a-box>
+
+      <!-- Techo del corredor de entrada -->
+      <a-box position="0 4.2 -11" width="4.8" height="0.5" depth="16" procedural-texture="type: limestone; repeat: 3 10"></a-box>
+
+      <!-- Antorchas en las paredes del pasadizo de entrada -->
+      <a-entity wall-torch="light: true" position="-2.05 2.3 -5.5" rotation="0 90 0"></a-entity>
+      <a-entity wall-torch="light: false" position="2.05 2.3 -5.5" rotation="0 -90 0"></a-entity>
+      <a-entity wall-torch="light: false" position="-2.05 2.3 -12.5" rotation="0 90 0"></a-entity>
+      <a-entity wall-torch="light: true" position="2.05 2.3 -12.5" rotation="0 -90 0"></a-entity>
+
+      <!-- GRAN CÁMARA FUNERARIA DEL FARAÓN (Z = -18 a Z = -36, X = -10 a X = 10) -->
+      <a-entity id="pharaoh-chamber" position="0 0 -27">
+        <!-- Suelo de piedra pulida -->
+        <a-box
+          class="teleportable"
+          position="0 0.02 0"
+          width="20"
+          height="0.06"
+          depth="18"
+          procedural-texture="type: limestone; repeat: 10 9"
+        ></a-box>
+
+        <!-- Techo abovedado de la cámara -->
+        <a-box position="0 7.4 0" width="20.6" height="0.6" depth="18.6" procedural-texture="type: limestone; repeat: 10 9"></a-box>
+
+        <!-- Muros interiores con jeroglíficos -->
+        <!-- Muro Sur (con abertura de 4.4m hacia el pasillo de entrada) -->
+        <a-box position="-6.1 3.7 9" width="7.8" height="7.4" depth="0.6" procedural-texture="type: hieroglyphs; repeat: 4 3"></a-box>
+        <a-box position="6.1 3.7 9" width="7.8" height="7.4" depth="0.6" procedural-texture="type: hieroglyphs; repeat: 4 3"></a-box>
+        <a-box position="0 5.8 9" width="4.4" height="3.2" depth="0.6" procedural-texture="type: hieroglyphs; repeat: 2 2"></a-box>
+
+        <!-- Muros Oeste y Este -->
+        <a-box position="-10 3.7 0" width="0.6" height="7.4" depth="18" procedural-texture="type: hieroglyphs; repeat: 9 3"></a-box>
+        <a-box position="10 3.7 0" width="0.6" height="7.4" depth="18" procedural-texture="type: hieroglyphs; repeat: 9 3"></a-box>
+
+        <!-- Muro Norte con PUERTA SECRETA en el centro (X = -1.8 a 1.8) -->
+        <a-box position="-5.9 3.7 -9" width="8.2" height="7.4" depth="0.6" procedural-texture="type: hieroglyphs; repeat: 4 3"></a-box>
+        <a-box position="5.9 3.7 -9" width="8.2" height="7.4" depth="0.6" procedural-texture="type: hieroglyphs; repeat: 4 3"></a-box>
+        <a-box position="0 5.6 -9" width="3.6" height="3.6" depth="0.6" procedural-texture="type: hieroglyphs; repeat: 2 2"></a-box>
+
+        <!-- PUERTA SECRETA DESLIZANTE (Se abre al reunir las 3 reliquias) -->
+        <a-entity id="secret-door" position="0 1.9 -9">
+          <a-box width="3.55" height="3.8" depth="0.48" procedural-texture="type: hieroglyphs; repeat: 2 2"></a-box>
+          <a-ring position="0 0.2 0.26" radius-inner="0.45" radius-outer="0.65" color="#d4af37" material="metalness: 0.8; roughness: 0.2"></a-ring>
+          <a-text
+            id="door-lock-text"
+            value="SELLADO\nReune las 3 reliquias"
+            align="center"
+            color="#ffd782"
+            width="2.6"
+            position="0 -0.85 0.27"
+          ></a-text>
+        </a-entity>
+
+        <!-- Columnas egipcias monumentales -->
+        <a-entity egyptian-column position="-5.5 0 -4.5"></a-entity>
+        <a-entity egyptian-column position="5.5 0 -4.5"></a-entity>
+        <a-entity egyptian-column position="-5.5 0 4.5"></a-entity>
+        <a-entity egyptian-column position="5.5 0 4.5"></a-entity>
+
+        <!-- Antorchas interiores en la cámara -->
+        <a-entity wall-torch="light: true" position="-9.6 2.6 -4.5" rotation="0 90 0"></a-entity>
+        <a-entity wall-torch="light: false" position="-9.6 2.6 4.5" rotation="0 90 0"></a-entity>
+        <a-entity wall-torch="light: true" position="9.6 2.6 -4.5" rotation="0 -90 0"></a-entity>
+        <a-entity wall-torch="light: false" position="9.6 2.6 4.5" rotation="0 -90 0"></a-entity>
+
+        <!-- SARCÓFAGO DORADO CENTRAL SOBRE ESTRADO -->
+        <a-entity id="sarcophagus-altar" position="0 0 0">
+          <!-- Escalón base -->
+          <a-box position="0 0.15 0" width="3.6" height="0.3" depth="4.8" procedural-texture="type: limestone; repeat: 2 3"></a-box>
+          <!-- Cuerpo del sarcófago -->
+          <a-box position="0 0.85 0" width="1.45" height="1.1" depth="2.8" color="#c9962c" material="metalness: 0.72; roughness: 0.28"></a-box>
+          <!-- Tapa ornamentada -->
+          <a-box position="0 1.48 0" width="1.32" height="0.24" depth="2.65" color="#f0c54d" material="metalness: 0.82; roughness: 0.2"></a-box>
+          <!-- Franjas lapislázuli -->
+          <a-box position="0 1.61 -0.6" width="1.1" height="0.05" depth="0.22" color="#1a4789" material="metalness: 0.4; roughness: 0.4"></a-box>
+          <a-box position="0 1.61 0.0" width="1.1" height="0.05" depth="0.22" color="#1a4789" material="metalness: 0.4; roughness: 0.4"></a-box>
+          <a-box position="0 1.61 0.6" width="1.1" height="0.05" depth="0.22" color="#1a4789" material="metalness: 0.4; roughness: 0.4"></a-box>
+        </a-entity>
+
+        <!-- ===================================================== -->
+        <!-- LAS 3 RELIQUIAS INTERACTIVAS (Click o Gatillo Quest)  -->
+        <!-- ===================================================== -->
+
+        <!-- RELIQUIA 1: Escarabajo Solar Dorado (Pedestal Oeste) -->
+        <a-entity position="-7.8 0 0">
+          <a-box position="0 0.65 0" width="0.9" height="1.3" depth="0.9" procedural-texture="type: hieroglyphs; repeat: 1 1"></a-box>
+          <a-entity
+            id="relic-scarab"
+            class="interactive"
+            relic-item="name: Escarabajo Solar"
+            position="0 1.75 0"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 6500; easing: linear"
+          >
+            <!-- Hitbox invisible amplia para apuntar cómodo con los mandos Quest 3 -->
+            <a-sphere radius="0.48" visible="false"></a-sphere>
+            <a-sphere radius="0.22" scale="0.85 0.55 1.25" color="#ffd447" material="metalness: 0.9; roughness: 0.15; emissive: #7a5200; emissiveIntensity: 0.4"></a-sphere>
+            <a-sphere position="0 0.02 0.25" radius="0.1" color="#1e56a0" material="metalness: 0.8; roughness: 0.2"></a-sphere>
+            <a-ring radius-inner="0.3" radius-outer="0.34" rotation="90 0 0" color="#ffea85" material="shader: flat"></a-ring>
+          </a-entity>
+        </a-entity>
+
+        <!-- RELIQUIA 2: Cruz Ankh de la Vida (Pedestal Este) -->
+        <a-entity position="7.8 0 0">
+          <a-box position="0 0.65 0" width="0.9" height="1.3" depth="0.9" procedural-texture="type: hieroglyphs; repeat: 1 1"></a-box>
+          <a-entity
+            id="relic-ankh"
+            class="interactive"
+            relic-item="name: Ankh de la Vida"
+            position="0 1.82 0"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 7000; easing: linear"
+          >
+            <a-sphere radius="0.5" visible="false"></a-sphere>
+            <a-torus position="0 0.18 0" radius="0.14" radius-tubular="0.032" color="#ffd447" material="metalness: 0.9; roughness: 0.15; emissive: #7a5200; emissiveIntensity: 0.4"></a-torus>
+            <a-box position="0 -0.1 0" width="0.07" height="0.36" depth="0.07" color="#ffd447" material="metalness: 0.9; roughness: 0.15; emissive: #7a5200; emissiveIntensity: 0.4"></a-box>
+            <a-box position="0 0.02 0" width="0.32" height="0.07" depth="0.07" color="#ffd447" material="metalness: 0.9; roughness: 0.15; emissive: #7a5200; emissiveIntensity: 0.4"></a-box>
+          </a-entity>
+        </a-entity>
+
+        <!-- RELIQUIA 3: Cetro Real del Faraón (Sobre el Sarcófago) -->
+        <a-entity
+          id="relic-scepter"
+          class="interactive"
+          relic-item="name: Cetro del Faraon"
+          position="0 2.15 0"
+          animation="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear"
+        >
+          <a-sphere radius="0.52" visible="false"></a-sphere>
+          <a-cylinder radius="0.03" height="0.75" rotation="0 0 25" color="#ffd447" material="metalness: 0.9; roughness: 0.15; emissive: #7a5200; emissiveIntensity: 0.45"></a-cylinder>
+          <a-octahedron position="-0.16 0.34 0" radius="0.11" color="#00e5ff" material="metalness: 0.3; roughness: 0.1; emissive: #0088aa; emissiveIntensity: 0.7"></a-octahedron>
+        </a-entity>
+
+        <!-- ===================================================== -->
+        <!-- 4. CÁMARA OCULTA DEL TESORO (Detrás de puerta norte)  -->
+        <!-- ===================================================== -->
+        <a-entity id="treasure-vault" position="0 0 -13.5">
+          <a-box class="teleportable" position="0 0.02 0" width="9" height="0.06" depth="9" procedural-texture="type: limestone; repeat: 5 5"></a-box>
+          <a-box position="0 5.5 0" width="9.4" height="0.5" depth="9.4" procedural-texture="type: limestone; repeat: 5 5"></a-box>
+          <a-box position="-4.5 2.75 0" width="0.5" height="5.5" depth="9" procedural-texture="type: hieroglyphs; repeat: 5 2"></a-box>
+          <a-box position="4.5 2.75 0" width="0.5" height="5.5" depth="9" procedural-texture="type: hieroglyphs; repeat: 5 2"></a-box>
+          <a-box position="0 2.75 -4.5" width="9.4" height="5.5" depth="0.5" procedural-texture="type: hieroglyphs; repeat: 5 2"></a-box>
+
+          <!-- Luz mística dorada interior -->
+          <a-entity id="vault-light" light="type: point; color: #ffcf56; intensity: 0.2; distance: 14" position="0 3.6 0"></a-entity>
+
+          <!-- Montañas de oro, cofres y estatua sagrada -->
+          <a-cone position="-2.2 0.8 -1.8" radius-bottom="1.4" radius-top="0.2" height="1.6" color="#e6b422" material="metalness: 0.85; roughness: 0.2"></a-cone>
+          <a-cone position="2.3 0.7 -1.6" radius-bottom="1.2" radius-top="0.15" height="1.4" color="#f2c438" material="metalness: 0.85; roughness: 0.2"></a-cone>
+
+          <!-- Cofre del tesoro abierto -->
+          <a-entity position="0 0 -2.2">
+            <a-box position="0 0.45 0" width="1.8" height="0.9" depth="1.1" color="#6b3e16" material="roughness: 0.7"></a-box>
+            <a-box position="0 0.92 0" width="1.86" height="0.12" depth="1.16" color="#ffd447" material="metalness: 0.85; roughness: 0.2"></a-box>
+            <a-box position="0 1.25 -0.45" rotation="-35 0 0" width="1.84" height="0.35" depth="1.12" color="#6b3e16"></a-box>
+            <a-sphere position="0 1.05 0" radius="0.35" color="#00f0ff" material="emissive: #00aacc; emissiveIntensity: 0.8"></a-sphere>
+          </a-entity>
+
+          <a-text
+            value="¡CAMARA DEL TESORO DESCUBIERTA!\nHas completado la expedicion."
+            align="center"
+            color="#ffe18c"
+            width="6.5"
+            position="0 3.2 -4.1"
+          ></a-text>
+        </a-entity>
+      </a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    /* =====================================================================
+       1. SINTETIZADOR DE AUDIO AMBIENTAL Y EFECTOS (Web Audio API sin URLs)
+       ===================================================================== */
+    class PyramidAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.windGain = null;
+        this.chamberGain = null;
+        this.initialized = false;
+      }
+
+      init() {
+        if (this.initialized) return;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioCtx();
+
+        // Ruido rosa filtrado para el viento del desierto
+        const bufferSize = this.ctx.sampleRate * 2;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99765 * b0 + white * 0.099046;
+          b1 = 0.96300 * b1 + white * 0.2965164;
+          b2 = 0.57000 * b2 + white * 1.0526913;
+          output[i] = (b0 + b1 + b2 + white * 0.1848) * 0.08;
+        }
+
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        const windFilter = this.ctx.createBiquadFilter();
+        windFilter.type = 'bandpass';
+        windFilter.frequency.value = 340;
+        windFilter.Q.value = 1.8;
+
+        this.windGain = this.ctx.createGain();
+        this.windGain.gain.value = 0.22;
+
+        whiteNoise.connect(windFilter);
+        windFilter.connect(this.windGain);
+        this.windGain.connect(this.ctx.destination);
+        whiteNoise.start();
+
+        // Drone místico grave para el interior de la pirámide
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+        osc1.frequency.value = 65.41; // Do grave (C2)
+        osc2.frequency.value = 98.00; // Sol grave (G2)
+
+        const chamberFilter = this.ctx.createBiquadFilter();
+        chamberFilter.type = 'lowpass';
+        chamberFilter.frequency.value = 190;
+
+        this.chamberGain = this.ctx.createGain();
+        this.chamberGain.gain.value = 0.0;
+
+        osc1.connect(chamberFilter);
+        osc2.connect(chamberFilter);
+        chamberFilter.connect(this.chamberGain);
+        this.chamberGain.connect(this.ctx.destination);
+        osc1.start();
+        osc2.start();
+
+        this.initialized = true;
+      }
+
+      // Ajusta dinámicamente el ambiente según si el jugador está fuera o dentro
+      updateEnvironment(isInside) {
+        if (!this.initialized || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        this.windGain.gain.setTargetAtTime(isInside ? 0.02 : 0.22, now, 0.6);
+        this.chamberGain.gain.setTargetAtTime(isInside ? 0.16 : 0.0, now, 0.6);
+      }
+
+      // Sonido cristalino al recoger una reliquia
+      playRelicChime(count) {
+        if (!this.initialized) this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        const baseFreq = notes[Math.min(count - 1, notes.length - 1)];
+
+        [baseFreq, baseFreq * 1.5].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+
+          gain.gain.setValueAtTime(0.001, now + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(0.22, now + idx * 0.09 + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 1.2);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.09);
+          osc.stop(now + idx * 0.09 + 1.25);
+        });
+      }
+
+      // Estruendo grave de piedra al abrirse la puerta secreta
+      playDoorRumble() {
+        if (!this.initialized) this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(52, now);
+        osc.frequency.linearRampToValueAtTime(34, now + 2.8);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 110;
+
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.28, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 3.1);
+      }
+    }
+
+    const audioEngine = new PyramidAudioEngine();
+
+    /* =====================================================================
+       2. GENERADOR DE TEXTURAS PROCEDURALES (Arena, Caliza, Jeroglíficos)
+       ===================================================================== */
+    const TextureCache = {};
+
+    function getProceduralTexture(type) {
+      if (TextureCache[type]) return TextureCache[type];
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      if (type === 'sand') {
+        ctx.fillStyle = '#d9a45b';
+        ctx.fillRect(0, 0, 512, 512);
+        // Ondas de arena del desierto
+        for (let y = 0; y < 512; y += 8) {
+          ctx.fillStyle = y % 16 === 0 ? 'rgba(255, 224, 168, 0.16)' : 'rgba(150, 96, 38, 0.12)';
+          ctx.beginPath();
+          for (let x = 0; x <= 512; x += 16) {
+            const wave = Math.sin((x / 512) * Math.PI * 4 + y * 0.05) * 4;
+            if (x === 0) ctx.moveTo(x, y + wave);
+            else ctx.lineTo(x, y + wave);
+          }
+          ctx.lineTo(512, y + 6);
+          ctx.lineTo(0, y + 6);
+          ctx.closePath();
+          ctx.fill();
+        }
+        // Grano fino
+        for (let i = 0; i < 4500; i++) {
+          ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,245,215,0.18)' : 'rgba(110,70,25,0.18)';
+          ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+        }
+      } else if (type === 'limestone') {
+        ctx.fillStyle = '#c4975a';
+        ctx.fillRect(0, 0, 512, 512);
+        const rows = 8;
+        const cols = 4;
+        const rowH = 512 / rows;
+        const colW = 512 / cols;
+
+        for (let r = 0; r < rows; r++) {
+          const offset = (r % 2) * (colW / 2);
+          for (let c = -1; c <= cols; c++) {
+            const bx = c * colW + offset;
+            const by = r * rowH;
+            const shade = 175 + Math.floor(Math.random() * 35);
+            ctx.fillStyle = `rgb(${shade}, ${Math.floor(shade * 0.76)}, ${Math.floor(shade * 0.46)})`;
+            ctx.fillRect(bx + 3, by + 3, colW - 6, rowH - 6);
+
+            ctx.strokeStyle = '#6e4c23';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(bx + 1.5, by + 1.5, colW - 3, rowH - 3);
+          }
+        }
+      } else if (type === 'hieroglyphs') {
+        ctx.fillStyle = '#b58447';
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Bandas verticales egipcias
+        const cols = 4;
+        const colW = 512 / cols;
+        const symbols = ['𓂀', '𓋹', '𓆣', '𓅃', '𓇳', ' snake', '𓉐', '𓏏'];
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let c = 0; c < cols; c++) {
+          const cx = c * colW + colW / 2;
+          ctx.strokeStyle = '#5c3c16';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(c * colW + 6, 6, colW - 12, 500);
+
+          for (let r = 0; r < 5; r++) {
+            const cy = r * 98 + 56;
+            const pick = (c + r) % 4;
+            ctx.strokeStyle = pick === 0 ? '#1b4d89' : pick === 1 ? '#8c2d19' : '#3d250c';
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.lineWidth = 5;
+
+            if (pick === 0) {
+              // Cruz Ankh estilizada
+              ctx.beginPath();
+              ctx.arc(cx, cy - 16, 13, 0, Math.PI * 2);
+              ctx.moveTo(cx, cy - 3);
+              ctx.lineTo(cx, cy + 28);
+              ctx.moveTo(cx - 18, cy + 8);
+              ctx.lineTo(cx + 18, cy + 8);
+              ctx.stroke();
+            } else if (pick === 1) {
+              // Disco solar con alas
+              ctx.beginPath();
+              ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.moveTo(cx - 38, cy - 6);
+              ctx.lineTo(cx - 16, cy);
+              ctx.lineTo(cx - 34, cy + 10);
+              ctx.moveTo(cx + 38, cy - 6);
+              ctx.lineTo(cx + 16, cy);
+              ctx.lineTo(cx + 34, cy + 10);
+              ctx.stroke();
+            } else if (pick === 2) {
+              // Ojo de Horus geométrico
+              ctx.beginPath();
+              ctx.ellipse(cx, cy, 24, 12, 0, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              // Escarabajo geométrico
+              ctx.beginPath();
+              ctx.ellipse(cx, cy, 15, 21, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      TextureCache[type] = texture;
+      return texture;
+    }
+
+    AFRAME.registerComponent('procedural-texture', {
+      schema: {
+        type: { type: 'string', default: 'sand' },
+        repeat: { type: 'vec2', default: { x: 1, y: 1 } }
+      },
+      init() {
+        const applyTex = () => {
+          const mesh = this.el.getObject3D('mesh');
+          if (!mesh) return;
+          const baseTex = getProceduralTexture(this.data.type);
+          const tex = baseTex.clone();
+          tex.repeat.set(this.data.repeat.x, this.data.repeat.y);
+          tex.needsUpdate = true;
+          mesh.material.map = tex;
+          mesh.material.needsUpdate = true;
+        };
+        if (this.el.getObject3D('mesh')) applyTex();
+        else this.el.addEventListener('object3dset', applyTex);
+      }
+    });
+
+    /* =====================================================================
+       3. COMPONENTES ARQUITECTÓNICOS Y DE AMBIENTACIÓN (Antorchas, Palmeras)
+       ===================================================================== */
+    AFRAME.registerComponent('wall-torch', {
+      schema: { light: { type: 'boolean', default: false } },
+      init() {
+        const el = this.el;
+        // Soporte de hierro
+        const holder = document.createElement('a-box');
+        holder.setAttribute('width', '0.12');
+        holder.setAttribute('height', '0.55');
+        holder.setAttribute('depth', '0.14');
+        holder.setAttribute('color', '#2b2118');
+        el.appendChild(holder);
+
+        // Llama animada
+        const flame = document.createElement('a-cone');
+        flame.setAttribute('position', '0 0.42 0.04');
+        flame.setAttribute('radius-bottom', '0.11');
+        flame.setAttribute('radius-top', '0.01');
+        flame.setAttribute('height', '0.34');
+        flame.setAttribute('color', '#ff9d2e');
+        flame.setAttribute('material', 'shader: flat');
+        flame.setAttribute('animation', 'property: scale; from: 0.9 0.88 0.9; to: 1.12 1.18 1.12; dir: alternate; loop: true; dur: 260');
+        el.appendChild(flame);
+
+        if (this.data.light) {
+          const light = document.createElement('a-entity');
+          light.setAttribute('position', '0.35 0.55 0');
+          light.setAttribute('light', 'type: point; color: #ff9a3c; intensity: 1.35; distance: 15; decay: 1.5');
+          el.appendChild(light);
+        }
+      }
+    });
+
+    AFRAME.registerComponent('torch-brazier', {
+      schema: { light: { type: 'boolean', default: true } },
+      init() {
+        const el = this.el;
+        const base = document.createElement('a-cylinder');
+        base.setAttribute('position', '0 0.75 0');
+        base.setAttribute('radius-bottom', '0.45');
+        base.setAttribute('radius-top', '0.62');
+        base.setAttribute('height', '1.5');
+        base.setAttribute('color', '#47331f');
+        el.appendChild(base);
+
+        const fire = document.createElement('a-cone');
+        fire.setAttribute('position', '0 1.85 0');
+        fire.setAttribute('radius-bottom', '0.42');
+        fire.setAttribute('radius-top', '0.02');
+        fire.setAttribute('height', '0.85');
+        fire.setAttribute('color', '#ffaa33');
+        fire.setAttribute('material', 'shader: flat');
+        fire.setAttribute('animation', 'property: scale; from: 0.92 0.9 0.92; to: 1.1 1.15 1.1; dir: alternate; loop: true; dur: 290');
+        el.appendChild(fire);
+
+        if (this.data.light) {
+          const light = document.createElement('a-entity');
+          light.setAttribute('position', '0 2.3 0');
+          light.setAttribute('light', 'type: point; color: #ff9e3d; intensity: 1.5; distance: 16; decay: 1.5');
+          el.appendChild(light);
+        }
+      }
+    });
+
+    AFRAME.registerComponent('egyptian-column', {
+      init() {
+        const el = this.el;
+        const base = document.createElement('a-cylinder');
+        base.setAttribute('position', '0 0.35 0');
+        base.setAttribute('radius', '0.85');
+        base.setAttribute('height', '0.7');
+        base.setAttribute('color', '#b3874c');
+        el.appendChild(base);
+
+        const shaft = document.createElement('a-cylinder');
+        shaft.setAttribute('position', '0 3.5 0');
+        shaft.setAttribute('radius', '0.62');
+        shaft.setAttribute('height', '5.8');
+        shaft.setAttribute('procedural-texture', 'type: hieroglyphs; repeat: 2 3');
+        el.appendChild(shaft);
+
+        const capital = document.createElement('a-cylinder');
+        capital.setAttribute('position', '0 6.75 0');
+        capital.setAttribute('radius-bottom', '0.62');
+        capital.setAttribute('radius-top', '1.15');
+        capital.setAttribute('height', '0.9');
+        capital.setAttribute('color', '#d4a659');
+        el.appendChild(capital);
+      }
+    });
+
+    AFRAME.registerComponent('desert-palm', {
+      init() {
+        const el = this.el;
+        const trunk = document.createElement('a-cylinder');
+        trunk.setAttribute('position', '0 2.6 0');
+        trunk.setAttribute('radius-bottom', '0.32');
+        trunk.setAttribute('radius-top', '0.18');
+        trunk.setAttribute('height', '5.2');
+        trunk.setAttribute('color', '#6e4b2a');
+        el.appendChild(trunk);
+
+        for (let i = 0; i < 6; i++) {
+          const leaf = document.createElement('a-box');
+          const angle = i * 60;
+          leaf.setAttribute('position', '0 5.1 0');
+          leaf.setAttribute('rotation', `28 ${angle} 0`);
+          leaf.setAttribute('width', '0.45');
+          leaf.setAttribute('height', '0.06');
+          leaf.setAttribute('depth', '2.8');
+          leaf.setAttribute('color', '#3e6b2c');
+          el.appendChild(leaf);
+        }
+      }
+    });
+
+    /* =====================================================================
+       4. LOCOMOCIÓN WEBXR PARA META QUEST 3 + TECLADO WASD + TELETRANSPORTE
+       ===================================================================== */
+    AFRAME.registerComponent('quest-locomotion', {
+      schema: {
+        speed: { type: 'number', default: 4.5 },
+        snapAngle: { type: 'number', default: 35 }
+      },
+      init() {
+        this.keys = {};
+        this.leftAxis = { x: 0, y: 0 };
+        this.rightAxis = { x: 0, y: 0 };
+        this.snapCooldown = false;
+
+        window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
+        window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+
+        const leftHand = document.getElementById('left-hand');
+        const rightHand = document.getElementById('right-hand');
+
+        leftHand.addEventListener('thumbstickmoved', (e) => {
+          this.leftAxis.x = e.detail.x;
+          this.leftAxis.y = e.detail.y;
+        });
+
+        rightHand.addEventListener('thumbstickmoved', (e) => {
+          this.rightAxis.x = e.detail.x;
+          this.rightAxis.y = e.detail.y;
+        });
+
+        // Teletransporte al hacer clic en cualquier suelo .teleportable
+        const scene = this.el.sceneEl;
+        scene.addEventListener('click', (evt) => {
+          const target = evt.target;
+          if (!target || !target.classList.contains('teleportable')) return;
+          const intersection = evt.detail && evt.detail.intersection;
+          if (intersection && intersection.point) {
+            const pt = intersection.point;
+            if (this.isWalkablePosition(pt.x, pt.z)) {
+              this.el.object3D.position.set(pt.x, 0, pt.z);
+            }
+          }
+        });
+      },
+
+      // Colisiones sencillas para no atravesar muros ni el sarcófago
+      isWalkablePosition(x, z) {
+        // Límites del desierto exterior
+        if (Math.abs(x) > 95 || Math.abs(z) > 95) return false;
+
+        // Zona de la pirámide (Z entre 2 y -46)
+        if (z < 2.2 && z > -46) {
+          // Pasillo de entrada (Z entre 2.2 y -18)
+          if (z >= -18) {
+            return Math.abs(x) < 1.85;
+          }
+          // Gran Cámara del Faraón (Z entre -18 y -35.6)
+          if (z < -18 && z > -35.6) {
+            if (Math.abs(x) > 9.2) return false;
+            // Evitar atravesar el sarcófago central
+            if (Math.abs(x) < 1.9 && Math.abs(z + 27) < 2.5) return false;
+            return true;
+          }
+          // Puerta secreta y cámara del tesoro (Z <= -35.6)
+          const doorOpen = window.pyramidGame && window.pyramidGame.doorOpened;
+          if (!doorOpen) return false;
+          if (z <= -35.6 && z > -44.2) {
+            return Math.abs(x) < 3.9;
+          }
+          return false;
+        }
+        return true;
+      },
+
+      tick(time, delta) {
+        const dt = Math.min(delta / 1000, 0.1);
+        const cam = document.getElementById('player-camera');
+        if (!cam) return;
+
+        // Giro por pasos (Snap Turn) con el joystick derecho de Meta Quest 3
+        if (Math.abs(this.rightAxis.x) > 0.65 && !this.snapCooldown) {
+          const dir = this.rightAxis.x > 0 ? -1 : 1;
+          this.el.object3D.rotation.y += THREE.MathUtils.degToRad(this.data.snapAngle * dir);
+          this.snapCooldown = true;
+        } else if (Math.abs(this.rightAxis.x) < 0.25) {
+          this.snapCooldown = false;
+        }
+
+        // Movimiento por teclado (PC) o joystick izquierdo (Meta Quest 3)
+        let moveX = this.leftAxis.x;
+        let moveZ = this.leftAxis.y;
+
+        if (this.keys['KeyW'] || this.keys['ArrowUp']) moveZ -= 1;
+        if (this.keys['KeyS'] || this.keys['ArrowDown']) moveZ += 1;
+        if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX -= 1;
+        if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX += 1;
+
+        if (Math.abs(moveX) > 0.08 || Math.abs(moveZ) > 0.08) {
+          const speedMult = (this.keys['ShiftLeft'] || this.keys['ShiftRight']) ? 1.7 : 1.0;
+          const forward = new THREE.Vector3();
+          cam.object3D.getWorldDirection(forward);
+          forward.y = 0;
+          forward.normalize();
+          // En A-Frame la cámara mira hacia -Z local, invertimos forward
+          forward.negate();
+
+          const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+          const step = new THREE.Vector3()
+            .addScaledVector(forward, -moveZ * this.data.speed * speedMult * dt)
+            .addScaledVector(right, moveX * this.data.speed * speedMult * dt);
+
+          const nextX = this.el.object3D.position.x + step.x;
+          const nextZ = this.el.object3D.position.z + step.z;
+
+          if (this.isWalkablePosition(nextX, this.el.object3D.position.z)) {
+            this.el.object3D.position.x = nextX;
+          }
+          if (this.isWalkablePosition(this.el.object3D.position.x, nextZ)) {
+            this.el.object3D.position.z = nextZ;
+          }
+        }
+      }
+    });
+
+    /* =====================================================================
+       5. INTERACCIÓN DE RELIQUIAS Y GESTOR DE ESTADO DEL JUEGO
+       ===================================================================== */
+    AFRAME.registerComponent('relic-item', {
+      schema: { name: { type: 'string', default: 'Reliquia' } },
+      init() {
+        this.collected = false;
+        this.el.addEventListener('click', () => {
+          if (this.collected) return;
+          this.collected = true;
+          this.el.setAttribute('visible', 'false');
+          this.el.classList.remove('interactive');
+          if (window.pyramidGame) {
+            window.pyramidGame.collectRelic(this.data.name);
+          }
+        });
+      }
+    });
+
+    AFRAME.registerComponent('pyramid-game-manager', {
+      init() {
+        this.relicsCollected = 0;
+        this.totalRelics = 3;
+        this.doorOpened = false;
+        this.wasInside = false;
+        window.pyramidGame = this;
+
+        // Mostrar HUD diegético dentro de las gafas al entrar en modo VR
+        this.el.addEventListener('enter-vr', () => {
+          const vrHud = document.getElementById('vr-hud');
+          if (vrHud) vrHud.setAttribute('visible', 'true');
+          audioEngine.init();
+        });
+
+        this.el.addEventListener('exit-vr', () => {
+          const vrHud = document.getElementById('vr-hud');
+          if (vrHud) vrHud.setAttribute('visible', 'false');
+        });
+      },
+
+      collectRelic(name) {
+        this.relicsCollected++;
+        audioEngine.playRelicChime(this.relicsCollected);
+
+        const countEl = document.getElementById('hud-count');
+        const msgEl = document.getElementById('hud-msg');
+        const vrText = document.getElementById('vr-hud-text');
+
+        if (countEl) countEl.textContent = this.relicsCollected;
+
+        if (this.relicsCollected < this.totalRelics) {
+          const msg = `Has recogido: ${name} (${this.relicsCollected}/3)`;
+          if (msgEl) msgEl.textContent = msg;
+          if (vrText) vrText.setAttribute('value', `Reliquias: ${this.relicsCollected}/3 | ${name}`);
+        } else {
+          this.openSecretDoor();
+        }
+      },
+
+      openSecretDoor() {
+        if (this.doorOpened) return;
+        this.doorOpened = true;
+        audioEngine.playDoorRumble();
+
+        const door = document.getElementById('secret-door');
+        const doorText = document.getElementById('door-lock-text');
+        const vaultLight = document.getElementById('vault-light');
+        const msgEl = document.getElementById('hud-msg');
+        const vrText = document.getElementById('vr-hud-text');
+
+        if (doorText) doorText.setAttribute('value', 'ABIERTO');
+        if (door) {
+          door.setAttribute('animation', {
+            property: 'position',
+            to: '0 5.4 -9',
+            dur: 3200,
+            easing: 'easeInOutQuad'
+          });
+        }
+        if (vaultLight) {
+          vaultLight.setAttribute('light', 'intensity', 2.4);
+        }
+
+        const successMsg = '¡3/3 Reliquias! La puerta norte se ha abierto.';
+        if (msgEl) msgEl.textContent = successMsg;
+        if (vrText) vrText.setAttribute('value', '¡3/3 Reliquias! Entra en la camara norte');
+      },
+
+      tick() {
+        const rig = document.getElementById('player-rig');
+        if (!rig) return;
+        const z = rig.object3D.position.z;
+        const isInside = z < 1.5;
+
+        if (isInside !== this.wasInside) {
+          this.wasInside = isInside;
+          audioEngine.updateEnvironment(isInside);
+
+          const msgEl = document.getElementById('hud-msg');
+          const vrText = document.getElementById('vr-hud-text');
+          if (this.relicsCollected === 0) {
+            const text = isInside
+              ? 'Has entrado en la piramide. Busca las 3 reliquias.'
+              : 'Explora el exterior y entra en la piramide.';
+            if (msgEl) msgEl.textContent = text;
+            if (vrText) vrText.setAttribute('value', `Reliquias: 0/3 | ${isInside ? 'Busca las 3 reliquias' : 'Entra en la piramide'}`);
+          }
+        }
+      }
+    });
+
+    // Botón de inicio de expedición (activa audio y cierra pantalla inicial)
+    document.getElementById('start-btn').addEventListener('click', () => {
+      audioEngine.init();
+      document.getElementById('overlay-ui').classList.add('hidden');
+    });
+  </script>
+</body>
+</html>
